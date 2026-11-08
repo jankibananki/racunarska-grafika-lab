@@ -143,7 +143,8 @@ void CRacunarskaGrafikaLab1PripremaView::DrawPot(CDC* pDC)
 
 // Jedan univerzalni segment: ucitava originalni EMF, menja mu
 // velicinu, rotira ga i postavlja na zadatu poziciju.
-// Ako je vec aktivna rotacija grupe, LEFTMULTIPLY cuva njen efekat.
+// Ako je aktivna rotacija grupe, LEFTMULTIPLY dodaje lokalne
+// transformacije PRE grupne i zadrzava korektnu rotaciju oko cvora.
 void CRacunarskaGrafikaLab1PripremaView::DrawCactusPart(
     CDC* pDC, float x, float y,
     float width, float height, float angle, bool light)
@@ -180,9 +181,12 @@ void CRacunarskaGrafikaLab1PripremaView::DrawFigure(CDC* pDC)
     // LEVA GRUPA: okretanje oko sredisnjeg cvora (250,351).
     {
         int state = pDC->SaveDC();
-        Translate(pDC, -250, -351, true);
-        Rotate(pDC, m_leftAngle, true);
-        Translate(pDC, 250, 351, true);
+        // LEFTMULTIPLY: za rotaciju oko tacke (250, 351),
+        // pozivi su obrnutim redosledom od RIGHTMULTIPLY varijante.
+        // Konacna matrica: T(-pivot) * R * T(+pivot).
+        Translate(pDC, 250, 351, false);
+        Rotate(pDC, m_leftAngle, false);
+        Translate(pDC, -250, -351, false);
 
         DrawCactusPart(pDC, 225, 327, 53, 90, -45, true);
         DrawCactusPart(pDC, 200, 300, 57, 28, 0, true);
@@ -197,9 +201,10 @@ void CRacunarskaGrafikaLab1PripremaView::DrawFigure(CDC* pDC)
     // DESNA GRUPA: zasebna rotacija oko istog centralnog cvora.
     {
         int state = pDC->SaveDC();
-        Translate(pDC, -250, -351, true);
-        Rotate(pDC, m_rightAngle, true);
-        Translate(pDC, 250, 351, true);
+        // LEFTMULTIPLY: ista sema kao za levu granu.
+        Translate(pDC, 250, 351, false);
+        Rotate(pDC, m_rightAngle, false);
+        Translate(pDC, -250, -351, false);
 
         DrawCactusPart(pDC, 279, 327, 53, 90, 45, true);
         DrawCactusPart(pDC, 307, 300, 57, 28, 0, true);
