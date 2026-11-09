@@ -130,7 +130,7 @@ void CIND19728View::Scale(
     );
 }
 
-// Rotacija - ugao u radijanima
+// Rotacija, ugao u radijanima
 
 void CIND19728View::Rotate(
     CDC* pDC,
@@ -173,7 +173,7 @@ void CIND19728View::DrawMetafilePart(
     }
 }
 
-// Crtanje jednog segmenta
+// Crtanje segmenta iz odgovarajuceg EMF resursa
 
 void CIND19728View::DrawSegment(
     CDC* pDC,
@@ -195,10 +195,8 @@ void CIND19728View::DrawSegment(
         CRect(-20, -80, 20, 0)
     );
 
-    // Vracanje skaliranja
     pDC->SetWorldTransform(&xOld);
 
-    // Prelazak na naredni spoj
     if (joint)
     {
         Translate(
@@ -217,7 +215,7 @@ void CIND19728View::DrawJoint(CDC* pDC)
     pDC->Ellipse(-10, -10, 10, 10);
 }
 
-// Crtanje kaktusa sa saksijom levo
+// Crtanje celog kaktusa
 
 void CIND19728View::DrawFigure(CDC* pDC)
 {
@@ -234,20 +232,18 @@ void CIND19728View::DrawFigure(CDC* pDC)
     CPen* oldPen = pDC->SelectObject(&blackPen);
     CBrush* oldBrush = pDC->SelectObject(&cactusBrush);
 
-    // Koren kaktusa - saksija levo
+    // Pocetak kaktusa, saksija levo
     Translate(pDC, 75, 250, false);
-
-    // Okretanje osnovnog segmenta udesno
     Rotate(pDC, PI / 2.0f, false);
 
     DrawJoint(pDC);
 
-    // Prvi veliki horizontalni segment
+    // Prvi veliki tamni segment
     DrawSegment(
-        pDC, false, 1.1f, 1.0f, true
+        pDC, false, 1.2f, 1.0f, true
     );
 
-    // Prvi veliki cvor J1 - (150, 250)
+    // Prvi cvor J1
     DrawJoint(pDC);
 
     XFORM xJ1;
@@ -263,14 +259,12 @@ void CIND19728View::DrawFigure(CDC* pDC)
             pDC, false, 0.75f, 0.9f, false
         );
 
-        // Povratak u J1
         pDC->SetWorldTransform(&xJ1);
     }
 
-    // Donja desna razgranata struktura
+    // Pokretna desna struktura
     {
-        // LEFT 2 / RIGHT 2 rotiraju ovu
-        // granu i sve njene nastavke oko J1.
+        // LEFT 2 / RIGHT 2
         Rotate(
             pDC,
             45.0f * DEG + m_angleSegment1,
@@ -279,7 +273,7 @@ void CIND19728View::DrawFigure(CDC* pDC)
 
         // Svetli dijagonalni segment
         DrawSegment(
-            pDC, true, 0.5f, 1.0f, true
+            pDC, true, 0.85f, 1.0f, true
         );
 
         // Drugi cvor J2
@@ -288,15 +282,15 @@ void CIND19728View::DrawFigure(CDC* pDC)
         XFORM xJ2;
         pDC->GetWorldTransform(&xJ2);
 
-        // Desna horizontalna grana
+        // Desna grana
         {
             Rotate(
                 pDC, -45.0f * DEG, false
             );
 
-            // Veliki horizontalni segment
+            // Veliki tamni srednji segment
             DrawSegment(
-                pDC, false, 0.8f, 1.0f, true
+                pDC, false, 0.9f, 1.0f, true
             );
 
             // Treci cvor J3
@@ -305,30 +299,30 @@ void CIND19728View::DrawFigure(CDC* pDC)
             XFORM xJ3;
             pDC->GetWorldTransform(&xJ3);
 
-            // Gornji desni svetli krak
+            // Gornji desni krak
             {
                 Rotate(
                     pDC, -45.0f * DEG, false
                 );
 
                 DrawSegment(
-                    pDC, true, 0.4f, 0.9f, false
+                    pDC, false, 0.75f, 0.82f, false
                 );
 
                 pDC->SetWorldTransform(&xJ3);
             }
 
-            // Srednji desni svetli krak
+            // Srednji desni krak
             {
                 DrawSegment(
-                    pDC, true, 0.4f, 0.85f, false
+                    pDC, false, 0.75f, 0.82f, false
                 );
 
                 pDC->SetWorldTransform(&xJ3);
             }
 
-            // Donji desni svetli krak
-            // LEFT / RIGHT rotiraju samo ovaj deo
+            // Donji desni krak
+            // LEFT / RIGHT rotiraju samo ovaj segment
             {
                 Rotate(
                     pDC,
@@ -337,25 +331,24 @@ void CIND19728View::DrawFigure(CDC* pDC)
                 );
 
                 DrawSegment(
-                    pDC, true, 0.4f, 0.9f, false
+                    pDC, false, 0.75f, 0.82f, false
                 );
 
                 pDC->SetWorldTransform(&xJ3);
             }
 
-            // Povratak u J2
             pDC->SetWorldTransform(&xJ2);
         }
 
-        // Donja vertikalna grana
+        // Donja grana
         {
             Rotate(
                 pDC, 45.0f * DEG, false
             );
 
-            // Tanak segment nadole
+            // Tamni segment ka donjem racvanju
             DrawSegment(
-                pDC, false, 0.55f, 1.0f, true
+                pDC, false, 0.8f, 1.0f, true
             );
 
             // Cetvrti cvor J4
@@ -364,50 +357,48 @@ void CIND19728View::DrawFigure(CDC* pDC)
             XFORM xJ4;
             pDC->GetWorldTransform(&xJ4);
 
-            // Donji levi svetli krak
+            // Donji levi krak
             {
                 Rotate(
                     pDC, 45.0f * DEG, false
                 );
 
                 DrawSegment(
-                    pDC, true, 0.4f, 0.9f, false
+                    pDC, false, 0.75f, 0.85f, false
                 );
 
                 pDC->SetWorldTransform(&xJ4);
             }
 
-            // Donji srednji svetli krak
+            // Donji srednji krak
             {
                 DrawSegment(
-                    pDC, true, 0.4f, 0.9f, false
+                    pDC, false, 0.75f, 0.85f, false
                 );
 
                 pDC->SetWorldTransform(&xJ4);
             }
 
-            // Donji desni svetli krak
+            // Donji desni krak
             {
                 Rotate(
                     pDC, -45.0f * DEG, false
                 );
 
                 DrawSegment(
-                    pDC, true, 0.4f, 0.9f, false
+                    pDC, false, 0.75f, 0.85f, false
                 );
 
                 pDC->SetWorldTransform(&xJ4);
             }
 
-            // Povratak u J2
             pDC->SetWorldTransform(&xJ2);
         }
 
-        // Povratak u nepokretni cvor J1
         pDC->SetWorldTransform(&xJ1);
     }
 
-    // Vracanje pocetne transformacije
+    // Vracanje transformacije pre saksije
     pDC->SetWorldTransform(&xInitial);
 
     // Saksija sa leve strane
@@ -420,7 +411,6 @@ void CIND19728View::DrawFigure(CDC* pDC)
     pDC->SelectObject(&potPen);
     pDC->SelectObject(&potBrush);
 
-    // Telo saksije
     CPoint pot[4] =
     {
         CPoint(0, 210),
@@ -431,11 +421,8 @@ void CIND19728View::DrawFigure(CDC* pDC)
 
     pDC->Polygon(pot, 4);
 
-    // Rub saksije uz kaktus
     pDC->SelectObject(&lipBrush);
-    pDC->Rectangle(
-        50, 190, 70, 310
-    );
+    pDC->Rectangle(50, 190, 70, 310);
 
     pDC->SelectObject(oldBrush);
     pDC->SelectObject(oldPen);
@@ -452,37 +439,36 @@ void CIND19728View::OnChar(
 
     switch (nChar)
     {
-        // Mreza
         case 'g':
         case 'G':
             m_showGrid = !m_showGrid;
             break;
 
-        // LEFT - donji desni svetli krak
+        // LEFT
         case 'a':
         case 'A':
             m_angleSegment2 -= STEP;
             break;
 
-        // RIGHT - suprotan smer
+        // RIGHT
         case 'd':
         case 'D':
             m_angleSegment2 += STEP;
             break;
 
-        // LEFT 2 - cela desna struktura
+        // LEFT 2
         case 'q':
         case 'Q':
             m_angleSegment1 -= STEP;
             break;
 
-        // RIGHT 2 - suprotan smer
+        // RIGHT 2
         case 'e':
         case 'E':
             m_angleSegment1 += STEP;
             break;
 
-        // Reset rotacija
+        // Reset
         case 'r':
         case 'R':
             m_angleSegment1 = 0.0f;
@@ -498,7 +484,8 @@ void CIND19728View::OnChar(
             return;
     }
 
-    Invalidate(FALSE);
+    // Brisanje prethodnog polozaja i ponovno crtanje
+    Invalidate(TRUE);
 }
 
 // Bojenje pozadine
