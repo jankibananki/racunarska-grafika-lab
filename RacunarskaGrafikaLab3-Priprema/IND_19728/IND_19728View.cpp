@@ -216,15 +216,15 @@ void CIND19728View::LoadImages(CDC* pDC)
     m_imagesInitialized = true;
 
     CString filenames[PIECE_COUNT] = {
-        _T("Slike\\deo0.png"),
-        _T("Slike\\deo1.png"),
-        _T("Slike\\deo2.png"),
-        _T("Slike\\deo3.png"),
-        _T("Slike\\deo4.png"),
-        _T("Slike\\deo5.png"),
-        _T("Slike\\deo6.png"),
-        _T("Slike\\deo7.png"),
-        _T("Slike\\deo8.png")
+        _T("Slike\\deo0.bmp"),
+        _T("Slike\\deo1.bmp"),
+        _T("Slike\\deo2.bmp"),
+        _T("Slike\\deo3.bmp"),
+        _T("Slike\\deo4.bmp"),
+        _T("Slike\\deo5.bmp"),
+        _T("Slike\\deo6.bmp"),
+        _T("Slike\\deo7.bmp"),
+        _T("Slike\\deo8.bmp")
     };
 
     for (int i = 0; i < PIECE_COUNT; i++)

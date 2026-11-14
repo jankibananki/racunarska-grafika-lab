@@ -4701,7 +4701,7 @@ void DImage::Save(CFile& file)
 	// Snimiti zaglavlje bitmape
 	file.Write(&BMI, sizeof(BITMAPINFO));
 	
-	// Snimiti sadržaj bitmape
+	// Snimiti sadrï¿½aj bitmape
 	file.Write(m_pBuf, m_nHeight*GetScanlineWidth());
 }
 
