@@ -216,15 +216,15 @@ void CIND19728View::LoadImages(CDC* pDC)
     m_imagesInitialized = true;
 
     CString filenames[PIECE_COUNT] = {
-        _T("Slike\\deo0.bmp"),
-        _T("Slike\\deo1.bmp"),
-        _T("Slike\\deo2.bmp"),
-        _T("Slike\\deo3.bmp"),
-        _T("Slike\\deo4.bmp"),
-        _T("Slike\\deo5.bmp"),
-        _T("Slike\\deo6.bmp"),
-        _T("Slike\\deo7.bmp"),
-        _T("Slike\\deo8.bmp")
+        _T("Slike\\deo0"),
+        _T("Slike\\deo1"),
+        _T("Slike\\deo2"),
+        _T("Slike\\deo3"),
+        _T("Slike\\deo4"),
+        _T("Slike\\deo5"),
+        _T("Slike\\deo6"),
+        _T("Slike\\deo7"),
+        _T("Slike\\deo8")
     };
 
     for (int i = 0; i < PIECE_COUNT; i++)
@@ -417,16 +417,11 @@ void CIND19728View::DrawPuzzlePiece(
     // Pozicija je centar dela.
     // Ovaj redosled transformacija koristi
     // desno mnozenje.
-    Translate(pDC, x, y, true);
-    Rotate(pDC, angle, true);
-    Mirror(pDC, mx, my, true);
-    Scale(pDC, sx, sy, true);
-    Translate(
-        pDC,
-        -w / 2.0f,
-        -h / 2.0f,
-        true
-    );
+    Translate(pDC, x, y, false);
+    Rotate(pDC, angle, false);
+    Mirror(pDC, mx, my, false);
+    Scale(pDC, sx, sy, false);
+    Translate(pDC, -w / 2.0f, -h / 2.0f, false);
 
     CDC maskDC;
     CDC colorDC;
