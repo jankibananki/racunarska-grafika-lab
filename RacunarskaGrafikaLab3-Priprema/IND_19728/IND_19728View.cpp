@@ -572,7 +572,7 @@ void CIND19728View::OnDraw(CDC* pDC)
 
     const float startX = 25.0f;
     const float startY = 25.0f;
-    const float tile = 150.0f;
+    const float tile = 135.0f;
 
     // Velicina bitmapa nakon transformacija
     const float pieceScale = 0.88f;
