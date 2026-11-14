@@ -532,35 +532,32 @@ void CIND19728View::OnDraw(CDC* pDC)
         RGB(255, 255, 255)
     );
 
-    if (m_showGrid)
-        DrawGrid(&memDC);
-
     const float DEG = PI / 180.0f;
 
     // Redosled delova po mestima u slagalici
+    
     const int order[PIECE_COUNT] = {
         0, 6, 4,
         8, 1, 2,
         3, 5, 7
     };
 
-    // Uglovi po broju fajla
     const float angles[PIECE_COUNT] = {
-         155.0f,
-         -60.0f,
-         -70.0f,
-         -20.0f,
-          75.0f,
+        155.0f,
+        -58.0f,
+        -72.0f,
+        -19.0f,
+        76.0f,
         -115.0f,
-         125.0f,
-          75.0f,
-        -115.0f
+        125.0f,
+        -161.0f,
+        -107.0f
     };
 
     const bool mirrorX[PIECE_COUNT] = {
         true, true, true,
         true, true, true,
-        true, false, true
+        true, true, true
     };
 
     const bool mirrorY[PIECE_COUNT] = {
@@ -568,6 +565,25 @@ void CIND19728View::OnDraw(CDC* pDC)
         false, false, false,
         false, false, false
     };
+
+    const float startX = 25.0f;
+    const float startY = 25.0f;
+    const float tile = 150.0f;
+    const float pieceScale = 1.0f;
+
+    // Korekcije po pozicijama u slagalici
+    const float offsetX[PIECE_COUNT] = {
+        8.0f, 11.0f, 11.0f,
+        -4.0f, -6.0f, -5.0f,
+        -3.0f,  0.0f,  5.0f
+    };
+
+    const float offsetY[PIECE_COUNT] = {
+        3.0f, -1.0f, -8.0f,
+        2.0f, -5.0f, -3.0f,
+        -9.0f,  0.0f,  8.0f
+    };
+
 
     const float startX = 25.0f;
     const float startY = 25.0f;
@@ -586,11 +602,11 @@ void CIND19728View::OnDraw(CDC* pDC)
         int col = slot % 3;
         int row = slot / 3;
 
-        float x =
-            startX + (col + 0.5f) * tile;
+        float x = startX + (col + 0.5f) * tile
+        + offsetX[slot];
 
-        float y =
-            startY + (row + 0.5f) * tile;
+        float y = startY + (row + 0.5f) * tile
+                + offsetY[slot];
 
         float sx =
             pieceScale * 256.0f / m_images[i].Width();
@@ -661,6 +677,9 @@ void CIND19728View::OnDraw(CDC* pDC)
     }
 
     // Prenos gotovog kadra na prozor
+
+    if (m_showGrid)
+    DrawGrid(&memDC);
 
     pDC->BitBlt(
         0, 0, width, height,
