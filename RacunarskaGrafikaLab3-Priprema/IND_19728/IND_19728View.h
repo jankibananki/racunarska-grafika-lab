@@ -31,8 +31,8 @@ protected:
     bool m_loaded[PIECE_COUNT] = {};
     bool m_imagesInitialized = false;
 
-    float m_pieceX = 400.0f;
-    float m_pieceY = 440.0f;
+    float m_pieceX = 600.0f;
+    float m_pieceY = 400.0f;
 
     bool m_showGrid = true;
 

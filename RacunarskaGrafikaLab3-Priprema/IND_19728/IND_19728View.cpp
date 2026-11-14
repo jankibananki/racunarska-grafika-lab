@@ -496,6 +496,7 @@ void CIND19728View::DrawGrid(CDC* pDC)
 
 // Glavno crtanje sa anti-flickerom
 
+
 void CIND19728View::OnDraw(CDC* pDC)
 {
     CIND19728Doc* pDoc = GetDocument();
@@ -514,7 +515,6 @@ void CIND19728View::OnDraw(CDC* pDC)
     if (width <= 0 || height <= 0)
         return;
 
-    // Ucitavamo slike samo prvi put.
     LoadImages(pDC);
 
     CDC memDC;
@@ -536,60 +536,66 @@ void CIND19728View::OnDraw(CDC* pDC)
     if (m_showGrid)
         DrawGrid(&memDC);
 
-    // Polozaji se lako menjaju ovde.
-    // Slike su numerisane redom:
-    //
-    // 0 1 2
-    // 3 4 5
-    // 6 7 8
-    //
-    // Deo 7 je pokretni deo.
-
     const float DEG = PI / 180.0f;
 
-    const float startX = 80.0f;
-    const float startY = 50.0f;
-    const float tile = 120.0f;
-
-    // Uglovi u stepenima.
-    // Podesavamo ih nakon provere originalnih slika.
-    float angles[PIECE_COUNT] = {
-        0, 0, 0,
-        0, 0, 0,
-        0, 0, 0
+    // Raspored fajlova po pozicijama slagalice
+    const int order[PIECE_COUNT] = {
+        0, 6, 4,
+        8, 1, 2,
+        3, 7, 5
     };
 
-    bool mirrorX[PIECE_COUNT] = {
+    // Pocetne rotacije, indeksirane po broju fajla
+    const float angles[PIECE_COUNT] = {
+         155.0f,
+         -60.0f,
+         -70.0f,
+         -20.0f,
+          75.0f,
+        -115.0f,
+         125.0f,
+          20.0f,
+        -115.0f
+    };
+
+    const bool mirrorX[PIECE_COUNT] = {
+        true, true, true,
+        true, true, true,
+        true, true, true
+    };
+
+    const bool mirrorY[PIECE_COUNT] = {
         false, false, false,
         false, false, false,
         false, false, false
     };
 
-    bool mirrorY[PIECE_COUNT] = {
-        false, false, false,
-        false, false, false,
-        false, false, false
-    };
+    const float startX = 25.0f;
+    const float startY = 25.0f;
+    const float tile = 150.0f;
 
-    for (int i = 0; i < PIECE_COUNT; i++)
+    // Velicina bitmapa nakon transformacija
+    const float pieceScale = 0.88f;
+
+    // Crtanje osam nepokretnih delova
+    for (int slot = 0; slot < PIECE_COUNT; slot++)
     {
+        int i = order[slot];
+
         if (i == MOVING_PIECE || !m_loaded[i])
             continue;
 
-        int col = i % 3;
-        int row = i / 3;
+        int col = slot % 3;
+        int row = slot / 3;
 
-        float x =
-            startX + (col + 0.5f) * tile;
-
-        float y =
-            startY + (row + 0.5f) * tile;
+        float x = startX + (col + 0.5f) * tile;
+        float y = startY + (row + 0.5f) * tile;
 
         float sx =
-            tile / m_images[i].Width();
+            pieceScale * 256.0f / m_images[i].Width();
 
         float sy =
-            tile / m_images[i].Height();
+            pieceScale * 256.0f / m_images[i].Height();
 
         DrawPuzzlePiece(
             &memDC,
@@ -602,13 +608,16 @@ void CIND19728View::OnDraw(CDC* pDC)
         );
     }
 
-    // Pokretni deo se crta na kraju.
+    // Plavi deo je inicijalno van svog mesta
     if (m_loaded[MOVING_PIECE])
     {
         int i = MOVING_PIECE;
 
-        float sx = tile / m_images[i].Width();
-        float sy = tile / m_images[i].Height();
+        float sx =
+            pieceScale * 256.0f / m_images[i].Width();
+
+        float sy =
+            pieceScale * 256.0f / m_images[i].Height();
 
         DrawPuzzlePiece(
             &memDC,
@@ -622,7 +631,6 @@ void CIND19728View::OnDraw(CDC* pDC)
         );
     }
 
-    // Prikaz problema pri ucitavanju.
     bool missing = false;
 
     for (int i = 0; i < PIECE_COUNT; i++)
@@ -645,9 +653,9 @@ void CIND19728View::OnDraw(CDC* pDC)
         );
     }
 
-    // Jedan prenos gotove slike na ekran.
     pDC->BitBlt(
-        0, 0, width, height,
+        0, 0,
+        width, height,
         &memDC,
         0, 0,
         SRCCOPY
@@ -690,8 +698,8 @@ void CIND19728View::OnKeyDown(
         break;
 
     case 'R':
-        m_pieceX = 400.0f;
-        m_pieceY = 440.0f;
+        m_pieceX = 600.0f;
+        m_pieceY = 400.0f;
         break;
 
     default:
