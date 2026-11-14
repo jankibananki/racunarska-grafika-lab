@@ -16,15 +16,13 @@ public:
 
     virtual void OnDraw(CDC* pDC);
     virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
-
     virtual ~CIND19728View();
 
 protected:
     static const int PIECE_COUNT = 9;
-    static const int MOVING_PIECE = 7;
+    static const int MOVING_PIECE = 5;
 
     DImage m_images[PIECE_COUNT];
-
     CBitmap m_masks[PIECE_COUNT];
     CBitmap m_colors[PIECE_COUNT];
 
@@ -37,19 +35,26 @@ protected:
     bool m_showGrid = true;
 
     void Translate(
-        CDC* pDC, float dX, float dY,
+        CDC* pDC,
+        float dX,
+        float dY,
         bool rightMultiply);
 
     void Scale(
-        CDC* pDC, float sX, float sY,
+        CDC* pDC,
+        float sX,
+        float sY,
         bool rightMultiply);
 
     void Rotate(
-        CDC* pDC, float angle,
+        CDC* pDC,
+        float angle,
         bool rightMultiply);
 
     void Mirror(
-        CDC* pDC, bool mx, bool my,
+        CDC* pDC,
+        bool mx,
+        bool my,
         bool rightMultiply);
 
     void MakeGray(DImage& img);
@@ -74,14 +79,13 @@ protected:
 
     void DrawGrid(CDC* pDC);
 
-    virtual BOOL OnPreparePrinting(
-        CPrintInfo* pInfo);
-
+    virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
     virtual void OnBeginPrinting(
-        CDC* pDC, CPrintInfo* pInfo);
-
+        CDC* pDC,
+        CPrintInfo* pInfo);
     virtual void OnEndPrinting(
-        CDC* pDC, CPrintInfo* pInfo);
+        CDC* pDC,
+        CPrintInfo* pInfo);
 
 #ifdef _DEBUG
     virtual void AssertValid() const;
@@ -90,10 +94,13 @@ protected:
 
 protected:
     afx_msg void OnKeyDown(
-        UINT nChar, UINT nRepCnt, UINT nFlags);
+        UINT nChar,
+        UINT nRepCnt,
+        UINT nFlags);
 
     afx_msg void OnLButtonDown(
-        UINT nFlags, CPoint point);
+        UINT nFlags,
+        CPoint point);
 
     afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 

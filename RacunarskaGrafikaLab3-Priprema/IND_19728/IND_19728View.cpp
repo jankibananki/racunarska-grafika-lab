@@ -86,7 +86,7 @@ void CIND19728View::Scale(
     );
 }
 
-// Rotacija u radijanima
+// Rotacija - ugao u radijanima
 
 void CIND19728View::Rotate(
     CDC* pDC,
@@ -110,7 +110,7 @@ void CIND19728View::Rotate(
     );
 }
 
-// Preslikavanje po X i Y osi
+// Preslikavanje
 
 void CIND19728View::Mirror(
     CDC* pDC,
@@ -169,7 +169,7 @@ void CIND19728View::MakeGray(DImage& img)
     img.Update();
 }
 
-// Drugaciji filter za pokretni deo
+// Plavi filter za pokretni deo
 
 void CIND19728View::MakeBlue(DImage& img)
 {
@@ -206,7 +206,7 @@ void CIND19728View::MakeBlue(DImage& img)
     img.Update();
 }
 
-// Ucitavanje svih devet delova
+// Ucitavanje slika
 
 void CIND19728View::LoadImages(CDC* pDC)
 {
@@ -215,6 +215,7 @@ void CIND19728View::LoadImages(CDC* pDC)
 
     m_imagesInitialized = true;
 
+    // Fajlovi su bez ekstenzije.
     CString filenames[PIECE_COUNT] = {
         _T("Slike\\deo0"),
         _T("Slike\\deo1"),
@@ -229,18 +230,18 @@ void CIND19728View::LoadImages(CDC* pDC)
 
     for (int i = 0; i < PIECE_COUNT; i++)
     {
-        m_loaded[i] = m_images[i].Load(filenames[i])
-            && m_images[i].isValid();
+        m_loaded[i] =
+            m_images[i].Load(filenames[i]) &&
+            m_images[i].isValid();
 
         if (!m_loaded[i])
             continue;
 
-        // Prvo pravimo masku iz originalne slike.
         PreparePiece(pDC, i);
     }
 }
 
-// Priprema transparentnosti i filtrirane bitmape
+// Priprema maske, filtera i kolor bitmape
 
 void CIND19728View::PreparePiece(
     CDC* pDC,
@@ -266,12 +267,10 @@ void CIND19728View::PreparePiece(
         return;
     }
 
-    // Boja gornjeg levog piksela za color key.
     int keyB = pixels[0];
     int keyG = pixels[1];
     int keyR = pixels[2];
 
-    // Proveravamo da li PNG ima stvarnu alfa providnost.
     bool hasTransparent = false;
     bool hasOpaque = false;
 
@@ -279,9 +278,9 @@ void CIND19728View::PreparePiece(
     {
         for (int i = 0; i < w * h; i++)
         {
-            int a = pixels[i * bpp + 3];
+            int alpha = pixels[i * bpp + 3];
 
-            if (a < 128)
+            if (alpha < 128)
                 hasTransparent = true;
             else
                 hasOpaque = true;
@@ -303,8 +302,8 @@ void CIND19728View::PreparePiece(
     CBitmap* oldMask =
         maskDC.SelectObject(&m_masks[index]);
 
-    // Bela maska = transparentno.
-    // Crna maska = deo slagalice.
+    // Bela maska je providna oblast.
+    // Crna maska je vidljivi deo slagalice.
 
     for (int y = 0; y < h; y++)
     {
@@ -325,7 +324,9 @@ void CIND19728View::PreparePiece(
                 int dr = abs((int)pixels[i + 2] - keyR);
 
                 transparent =
-                    db < 25 && dg < 25 && dr < 25;
+                    db < 25 &&
+                    dg < 25 &&
+                    dr < 25;
             }
 
             maskDC.SetPixel(
@@ -337,13 +338,13 @@ void CIND19728View::PreparePiece(
         }
     }
 
-    // Filtriranje nakon pravljenja maske.
+    // Filtriranje nakon kreiranja maske
+
     if (index == MOVING_PIECE)
         MakeBlue(img);
     else
         MakeGray(img);
 
-    // Kolor bitmapa, kompatibilna sa prozorom.
     m_colors[index].CreateCompatibleBitmap(
         pDC, w, h
     );
@@ -360,8 +361,6 @@ void CIND19728View::PreparePiece(
         CRect(0, 0, w, h)
     );
 
-    // U transparentnim oblastima pravimo crne piksele.
-    // To je priprema za kasniji SRCPAINT.
     COLORREF oldText =
         colorDC.SetTextColor(RGB(255, 255, 255));
 
@@ -370,7 +369,8 @@ void CIND19728View::PreparePiece(
 
     colorDC.BitBlt(
         0, 0, w, h,
-        &maskDC, 0, 0, SRCAND
+        &maskDC, 0, 0,
+        SRCAND
     );
 
     colorDC.SetTextColor(oldText);
@@ -414,9 +414,9 @@ void CIND19728View::DrawPuzzlePiece(
 
     pDC->SetGraphicsMode(GM_ADVANCED);
 
-    // Pozicija je centar dela.
-    // Ovaj redosled transformacija koristi
-    // desno mnozenje.
+    // Centriranje, skaliranje, preslikavanje,
+    // rotacija i postavljanje na zadatu poziciju.
+
     Translate(pDC, x, y, false);
     Rotate(pDC, angle, false);
     Mirror(pDC, mx, my, false);
@@ -443,7 +443,7 @@ void CIND19728View::DrawPuzzlePiece(
 
     pDC->SetStretchBltMode(COLORONCOLOR);
 
-    // Prvi prolaz: maska.
+    // Transparentnost - maska
     pDC->StretchBlt(
         0, 0, w, h,
         &maskDC,
@@ -451,7 +451,7 @@ void CIND19728View::DrawPuzzlePiece(
         SRCAND
     );
 
-    // Drugi prolaz: sadrzaj slike.
+    // Transparentnost - slika
     pDC->StretchBlt(
         0, 0, w, h,
         &colorDC,
@@ -468,7 +468,7 @@ void CIND19728View::DrawPuzzlePiece(
     pDC->RestoreDC(saved);
 }
 
-// Pozadinska mreza
+// Crtanje mreze
 
 void CIND19728View::DrawGrid(CDC* pDC)
 {
@@ -477,7 +477,7 @@ void CIND19728View::DrawGrid(CDC* pDC)
         RGB(230, 230, 230)
     );
 
-    CPen* old = pDC->SelectObject(&pen);
+    CPen* oldPen = pDC->SelectObject(&pen);
 
     for (int x = 0; x <= 500; x += 25)
     {
@@ -491,11 +491,10 @@ void CIND19728View::DrawGrid(CDC* pDC)
         pDC->LineTo(500, y);
     }
 
-    pDC->SelectObject(old);
+    pDC->SelectObject(oldPen);
 }
 
 // Glavno crtanje sa anti-flickerom
-
 
 void CIND19728View::OnDraw(CDC* pDC)
 {
@@ -538,14 +537,14 @@ void CIND19728View::OnDraw(CDC* pDC)
 
     const float DEG = PI / 180.0f;
 
-    // Raspored fajlova po pozicijama slagalice
+    // Redosled delova po mestima u slagalici
     const int order[PIECE_COUNT] = {
         0, 6, 4,
         8, 1, 2,
-        3, 7, 5
+        3, 5, 7
     };
 
-    // Pocetne rotacije, indeksirane po broju fajla
+    // Uglovi po broju fajla
     const float angles[PIECE_COUNT] = {
          155.0f,
          -60.0f,
@@ -554,14 +553,14 @@ void CIND19728View::OnDraw(CDC* pDC)
           75.0f,
         -115.0f,
          125.0f,
-          20.0f,
+          75.0f,
         -115.0f
     };
 
     const bool mirrorX[PIECE_COUNT] = {
         true, true, true,
         true, true, true,
-        true, true, true
+        true, false, true
     };
 
     const bool mirrorY[PIECE_COUNT] = {
@@ -572,12 +571,11 @@ void CIND19728View::OnDraw(CDC* pDC)
 
     const float startX = 25.0f;
     const float startY = 25.0f;
-    const float tile = 135.0f;
+    const float tile = 150.0f;
+    const float pieceScale = 1.0f;
 
-    // Velicina bitmapa nakon transformacija
-    const float pieceScale = 0.88f;
+    // Osam sivih delova
 
-    // Crtanje osam nepokretnih delova
     for (int slot = 0; slot < PIECE_COUNT; slot++)
     {
         int i = order[slot];
@@ -588,8 +586,11 @@ void CIND19728View::OnDraw(CDC* pDC)
         int col = slot % 3;
         int row = slot / 3;
 
-        float x = startX + (col + 0.5f) * tile;
-        float y = startY + (row + 0.5f) * tile;
+        float x =
+            startX + (col + 0.5f) * tile;
+
+        float y =
+            startY + (row + 0.5f) * tile;
 
         float sx =
             pieceScale * 256.0f / m_images[i].Width();
@@ -600,15 +601,18 @@ void CIND19728View::OnDraw(CDC* pDC)
         DrawPuzzlePiece(
             &memDC,
             m_images[i],
-            x, y,
+            x,
+            y,
             angles[i] * DEG,
-            sx, sy,
+            sx,
+            sy,
             mirrorX[i],
             mirrorY[i]
         );
     }
 
-    // Plavi deo je inicijalno van svog mesta
+    // Plavi deo, inicijalno van slagalice
+
     if (m_loaded[MOVING_PIECE])
     {
         int i = MOVING_PIECE;
@@ -625,11 +629,14 @@ void CIND19728View::OnDraw(CDC* pDC)
             m_pieceX,
             m_pieceY,
             angles[i] * DEG,
-            sx, sy,
+            sx,
+            sy,
             mirrorX[i],
             mirrorY[i]
         );
     }
+
+    // Prikaz upozorenja ako nedostaje slika
 
     bool missing = false;
 
@@ -653,18 +660,18 @@ void CIND19728View::OnDraw(CDC* pDC)
         );
     }
 
+    // Prenos gotovog kadra na prozor
+
     pDC->BitBlt(
-        0, 0,
-        width, height,
-        &memDC,
-        0, 0,
+        0, 0, width, height,
+        &memDC, 0, 0,
         SRCCOPY
     );
 
     memDC.SelectObject(oldBuffer);
 }
 
-// Strelice pomeraju obojeni deo
+// Tastatura
 
 void CIND19728View::OnKeyDown(
     UINT nChar,
@@ -715,13 +722,37 @@ void CIND19728View::OnKeyDown(
     );
 }
 
-// Fokus za kontrolu tastaturom
+// Klik za postavljanje plavog dela
 
 void CIND19728View::OnLButtonDown(
     UINT nFlags,
     CPoint point)
 {
     SetFocus();
+
+    const float targetX = 250.0f;
+    const float targetY = 400.0f;
+    const float halfSize = 75.0f;
+
+    bool clickedBlue =
+        point.x >= m_pieceX - halfSize &&
+        point.x <= m_pieceX + halfSize &&
+        point.y >= m_pieceY - halfSize &&
+        point.y <= m_pieceY + halfSize;
+
+    bool clickedTarget =
+        point.x >= targetX - halfSize &&
+        point.x <= targetX + halfSize &&
+        point.y >= targetY - halfSize &&
+        point.y <= targetY + halfSize;
+
+    if (clickedBlue || clickedTarget)
+    {
+        m_pieceX = targetX;
+        m_pieceY = targetY;
+
+        Invalidate(FALSE);
+    }
 
     CView::OnLButtonDown(nFlags, point);
 }
