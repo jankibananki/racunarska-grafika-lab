@@ -86,7 +86,7 @@ void CIND19728View::Scale(
     );
 }
 
-// Rotacija - ugao u radijanima
+// Rotacija
 
 void CIND19728View::Rotate(
     CDC* pDC,
@@ -132,89 +132,197 @@ void CIND19728View::Mirror(
     );
 }
 
-// Bitmapa koju DImage ucita ima 32 bita po pikselu (B, G, R, rezervisano).
-// Ne menjamo DImage klasu niti njen interni bafer.
-void CIND19728View::FilterBitmap(DImage& img, bool blue)
+// Filtriranje preko GetBitmapBits i SetBitmapBits
+
+void CIND19728View::ApplyFilter(
+    CBitmap& bmp,
+    bool blue)
 {
-    CBitmap* bitmap = img.GetBitmap();
-    BITMAP info = {};
-    bitmap->GetBitmap(&info);
-    const LONG size = info.bmWidthBytes * info.bmHeight;
-    std::vector<BYTE> pixels(size);
-    if (info.bmBitsPixel != 32 || bitmap->GetBitmapBits(size, pixels.data()) != size)
+    BITMAP bm = {};
+    bmp.GetBitmap(&bm);
+
+    if (bm.bmPlanes != 1 || bm.bmBitsPixel != 32)
         return;
 
-    for (int y = 0; y < info.bmHeight; ++y)
-        for (int x = 0; x < info.bmWidth; ++x)
+    LONG size = bm.bmWidthBytes * bm.bmHeight;
+
+    std::vector<BYTE> pixels(size);
+
+    if (bmp.GetBitmapBits(size, pixels.data()) != size)
+        return;
+
+    for (int y = 0; y < bm.bmHeight; y++)
+    {
+        for (int x = 0; x < bm.bmWidth; x++)
         {
-            BYTE* pixel = pixels.data() + y * info.bmWidthBytes + x * 4;
-            int gray = 64 + (pixel[0] + pixel[1] + pixel[2]) / 3;
-            if (gray > 255) gray = 255;
-            // Plavi deo zadrzava detalje, sa potisnutim R i G kanalima.
-            pixel[0] = static_cast<BYTE>(blue ? gray - 64 : gray);
-            pixel[1] = pixel[2] = blue ? 0 : static_cast<BYTE>(gray);
+            int i = y * bm.bmWidthBytes + x * 4;
+
+            int b = pixels[i];
+            int g = pixels[i + 1];
+            int r = pixels[i + 2];
+
+            int gr = 64 + (r + g + b) / 3;
+
+            if (gr > 255)
+                gr = 255;
+
+            pixels[i] = static_cast<BYTE>(gr);
+
+            if (blue)
+            {
+                pixels[i + 1] = 0;
+                pixels[i + 2] = 0;
+            }
+            else
+            {
+                pixels[i + 1] = static_cast<BYTE>(gr);
+                pixels[i + 2] = static_cast<BYTE>(gr);
+            }
         }
-    bitmap->SetBitmapBits(size, pixels.data());
+    }
+
+    bmp.SetBitmapBits(size, pixels.data());
 }
 
-void CIND19728View::MakeGray(DImage& img) { FilterBitmap(img, false); }
-void CIND19728View::MakeBlue(DImage& img) { FilterBitmap(img, true); }
+// Ucitavanje slika
 
 void CIND19728View::LoadImages(CDC* pDC)
 {
-    if (m_imagesInitialized) return;
-    m_imagesInitialized = true;
-    TCHAR executable[MAX_PATH] = {};
-    GetModuleFileName(nullptr, executable, MAX_PATH);
-    CString folder(executable);
-    folder = folder.Left(folder.ReverseFind(_T('\\')) + 1);
+    if (m_imagesInitialized)
+        return;
 
-    for (int i = 0; i < PIECE_COUNT; ++i)
+    m_imagesInitialized = true;
+
+    for (int i = 0; i < PIECE_COUNT; i++)
     {
-        CString relative;
-        relative.Format(_T("Slike\\deo%d.bmp"), i);
-        // Visual Studio i pokretanje iz izlaznog direktorijuma.
-        CString path = relative;
-        if (GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
-            path = folder + relative;
-        if (GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES)
-            continue;
-        m_loaded[i] = m_images[i].Load(path) && m_images[i].isValid();
-        if (m_loaded[i]) PreparePiece(pDC, i);
+        CString filename;
+        filename.Format(_T("Slike\\deo%d.bmp"), i);
+
+        m_loaded[i] = m_images[i].Load(filename);
+
+        // Podrska i za fajlove bez ekstenzije
+        if (!m_loaded[i])
+        {
+            filename.Format(_T("Slike\\deo%d"), i);
+            m_loaded[i] = m_images[i].Load(filename);
+        }
+
+        if (m_loaded[i])
+        {
+            m_loaded[i] = m_images[i].isValid();
+
+            if (m_loaded[i])
+                m_loaded[i] = PreparePiece(pDC, i);
+        }
     }
 }
 
-void CIND19728View::PreparePiece(CDC* pDC, int index)
+// Priprema transparentnosti i filtrirane slike
+
+bool CIND19728View::PreparePiece(
+    CDC* pDC,
+    int index)
 {
     DImage& img = m_images[index];
-    const int w = img.Width(), h = img.Height();
-    CDC sourceDC, maskDC, colorDC;
-    sourceDC.CreateCompatibleDC(pDC);
-    maskDC.CreateCompatibleDC(pDC);
-    colorDC.CreateCompatibleDC(pDC);
-    m_masks[index].CreateBitmap(w, h, 1, 1, nullptr);
-    m_colors[index].CreateCompatibleBitmap(pDC, w, h);
-    CBitmap* oldSource = sourceDC.SelectObject(img.GetBitmap());
-    CBitmap* oldMask = maskDC.SelectObject(&m_masks[index]);
-    CBitmap* oldColor = colorDC.SelectObject(&m_colors[index]);
 
-    // Pre filtriranja: boja gornjeg levog piksela postaje bela u maski.
-    sourceDC.SetBkColor(sourceDC.GetPixel(0, 0));
-    maskDC.BitBlt(0, 0, w, h, &sourceDC, 0, 0, SRCCOPY);
-    sourceDC.SelectObject(oldSource);
-    if (index == MOVING_PIECE) MakeBlue(img); else MakeGray(img);
-    oldSource = sourceDC.SelectObject(img.GetBitmap());
-    colorDC.BitBlt(0, 0, w, h, &sourceDC, 0, 0, SRCCOPY);
-    // Bela oblast maske mora postati crna na kolor bitmap istoj poziciji.
-    colorDC.SetTextColor(RGB(255, 255, 255));
-    colorDC.SetBkColor(RGB(0, 0, 0));
-    colorDC.BitBlt(0, 0, w, h, &maskDC, 0, 0, SRCAND);
+    int w = img.Width();
+    int h = img.Height();
+
+    if (w <= 0 || h <= 0 || !img.GetBitmap())
+        return false;
+
+    CDC sourceDC;
+    CDC maskDC;
+    CDC colorDC;
+
+    if (!sourceDC.CreateCompatibleDC(pDC))
+        return false;
+
+    if (!maskDC.CreateCompatibleDC(pDC))
+        return false;
+
+    if (!colorDC.CreateCompatibleDC(pDC))
+        return false;
+
+    if (!m_masks[index].CreateBitmap(
+        w, h, 1, 1, nullptr))
+        return false;
+
+    if (!m_colors[index].CreateBitmap(
+        w, h, 1, 32, nullptr))
+        return false;
+
+    CBitmap* oldSource =
+        sourceDC.SelectObject(img.GetBitmap());
+
+    CBitmap* oldMask =
+        maskDC.SelectObject(&m_masks[index]);
+
+    CBitmap* oldColor =
+        colorDC.SelectObject(&m_colors[index]);
+
+    // Uzimamo boju pozadine iz originalne slike
+    COLORREF background = sourceDC.GetPixel(0, 0);
+
+    // Prvo kopiramo originalnu sliku
+    colorDC.BitBlt(
+        0, 0, w, h,
+        &sourceDC,
+        0, 0,
+        SRCCOPY
+    );
+
+    // Kreiranje monohromatske maske
+    COLORREF oldSourceBk =
+        sourceDC.SetBkColor(background);
+
+    maskDC.BitBlt(
+        0, 0, w, h,
+        &sourceDC,
+        0, 0,
+        SRCCOPY
+    );
+
+    sourceDC.SetBkColor(oldSourceBk);
+
+    // Vracamo GDI objekte pre direktne izmene bitmape
+    colorDC.SelectObject(oldColor);
+
+    // Filter se primenjuje samo na kolor bitmapu
+    ApplyFilter(
+        m_colors[index],
+        index == MOVING_PIECE
+    );
+
+    // Ponovo biramo filtriranu bitmapu
+    oldColor =
+        colorDC.SelectObject(&m_colors[index]);
+
+    // Crna pozadina za SRCPAINT
+    COLORREF oldText =
+        colorDC.SetTextColor(RGB(255, 255, 255));
+
+    COLORREF oldBk =
+        colorDC.SetBkColor(RGB(0, 0, 0));
+
+    colorDC.BitBlt(
+        0, 0, w, h,
+        &maskDC,
+        0, 0,
+        SRCAND
+    );
+
+    colorDC.SetTextColor(oldText);
+    colorDC.SetBkColor(oldBk);
+
     sourceDC.SelectObject(oldSource);
     maskDC.SelectObject(oldMask);
     colorDC.SelectObject(oldColor);
+
+    return true;
 }
 
-// Crtanje jednog dela slagalice
+// Crtanje pojedinacnog dela slagalice
 
 void CIND19728View::DrawPuzzlePiece(
     CDC* pDC,
@@ -248,17 +356,17 @@ void CIND19728View::DrawPuzzlePiece(
 
     pDC->SetGraphicsMode(GM_ADVANCED);
 
-    // Centriranje, skaliranje, preslikavanje,
-    // rotacija i postavljanje na zadatu poziciju.
-
     Translate(pDC, x, y, false);
     Rotate(pDC, angle, false);
     Mirror(pDC, mx, my, false);
     Scale(pDC, sx, sy, false);
-    // Centar kvadratnog jezgra, bez ispupcenja (nije centar cele bitmape).
-    const float pivotX[PIECE_COUNT] = { 123.914f, 125.126f, 125.161f, 123.957f, 124.577f, 124.764f, 124.212f, 124.283f, 124.238f };
-    const float pivotY[PIECE_COUNT] = { 135.190f, 135.205f, 135.657f, 136.011f, 135.014f, 135.018f, 135.818f, 135.093f, 135.397f };
-    Translate(pDC, -pivotX[index], -pivotY[index], false);
+
+    Translate(
+        pDC,
+        -w / 2.0f,
+        -h / 2.0f,
+        false
+    );
 
     CDC maskDC;
     CDC colorDC;
@@ -280,7 +388,7 @@ void CIND19728View::DrawPuzzlePiece(
 
     pDC->SetStretchBltMode(COLORONCOLOR);
 
-    // Transparentnost - maska
+    // Prvi prolaz - maska
     pDC->StretchBlt(
         0, 0, w, h,
         &maskDC,
@@ -288,7 +396,7 @@ void CIND19728View::DrawPuzzlePiece(
         SRCAND
     );
 
-    // Transparentnost - slika
+    // Drugi prolaz - filtrirana slika
     pDC->StretchBlt(
         0, 0, w, h,
         &colorDC,
@@ -299,8 +407,8 @@ void CIND19728View::DrawPuzzlePiece(
     pDC->SetTextColor(oldText);
     pDC->SetBkColor(oldBk);
 
-    colorDC.SelectObject(oldColor);
     maskDC.SelectObject(oldMask);
+    colorDC.SelectObject(oldColor);
 
     pDC->RestoreDC(saved);
 }
@@ -309,10 +417,7 @@ void CIND19728View::DrawPuzzlePiece(
 
 void CIND19728View::DrawGrid(CDC* pDC)
 {
-    CPen pen(
-        PS_SOLID, 1,
-        RGB(230, 230, 230)
-    );
+    CPen pen(PS_SOLID, 1, RGB(230, 230, 230));
 
     CPen* oldPen = pDC->SelectObject(&pen);
 
@@ -357,6 +462,7 @@ void CIND19728View::OnDraw(CDC* pDC)
     memDC.CreateCompatibleDC(pDC);
 
     CBitmap backBuffer;
+
     backBuffer.CreateCompatibleBitmap(
         pDC, width, height
     );
@@ -369,50 +475,142 @@ void CIND19728View::OnDraw(CDC* pDC)
         RGB(255, 255, 255)
     );
 
-    if (m_showGrid) DrawGrid(&memDC);
+    // Mreza se crta iza slagalice
+    if (m_showGrid)
+        DrawGrid(&memDC);
 
-    // Slika je okrenuta kao na zadatom primeru: glava ulevo.
-    const int order[PIECE_COUNT] = { 2, 1, 0, 3, 8, 4, 5, 7, 6 };
-    // Uglovi su indeksirani brojem fajla, u stepenima.
-    const float angles[PIECE_COUNT] = { -20, 100, 61, 162, 51, 200, -5, 127, -47 };
-    // Pokretni deo crtamo poslednji da ostane vidljiv pri pomeranju.
-    for (int pass = 0; pass < 2; ++pass)
-    for (int slot = 0; slot < PIECE_COUNT; ++slot)
+    const float DEG = PI / 180.0f;
+
+    // Redosled fajlova po pozicijama
+    const int order[PIECE_COUNT] = {
+        2, 1, 0,
+        3, 8, 4,
+        5, 7, 6
+    };
+
+    // Rotacije po indeksima fajlova
+    const float angles[PIECE_COUNT] = {
+        -20.0f,
+        100.0f,
+         62.0f,
+        161.0f,
+         51.0f,
+       -160.0f,
+         -5.0f,
+        127.0f,
+        -47.0f
+    };
+
+    const bool mirrorX[PIECE_COUNT] = {
+        true, true, true,
+        true, true, true,
+        true, true, true
+    };
+
+    const bool mirrorY[PIECE_COUNT] = {
+        false, false, false,
+        false, false, false,
+        false, false, false
+    };
+
+    const float startX = 25.0f;
+    const float startY = 25.0f;
+    const float tile = 150.0f;
+    const float pieceScale = 1.0f;
+
+    // Korekcije po pozicijama u slagalici
+    const float offsetX[PIECE_COUNT] = {
+         6.0f,  8.0f, -6.0f,
+         5.0f, -8.0f,  4.0f,
+         0.0f,  8.0f, -4.0f
+    };
+
+    const float offsetY[PIECE_COUNT] = {
+        -6.0f, -2.0f, -6.0f,
+         7.0f, -3.0f, -7.0f,
+         9.0f,  2.0f, -8.0f
+    };
+
+    // Osam nepokretnih sivih delova
+    for (int slot = 0; slot < PIECE_COUNT; slot++)
     {
-        const int i = order[slot];
-        if ((i == MOVING_PIECE) != (pass == 1)) continue;
-        const float x = i == MOVING_PIECE ? m_pieceX : 100.0f + (slot % 3) * 150.0f;
-        const float y = i == MOVING_PIECE ? m_pieceY : 100.0f + (slot / 3) * 150.0f;
-        DrawPuzzlePiece(&memDC, m_images[i], x, y,
-            angles[i] * PI / 180.0f, 1.0f, 1.0f, true, false);
+        int i = order[slot];
+
+        if (i == MOVING_PIECE || !m_loaded[i])
+            continue;
+
+        int col = slot % 3;
+        int row = slot / 3;
+
+        float x =
+            startX + (col + 0.5f) * tile
+            + offsetX[slot];
+
+        float y =
+            startY + (row + 0.5f) * tile
+            + offsetY[slot];
+
+        float sx =
+            pieceScale * 256.0f / m_images[i].Width();
+
+        float sy =
+            pieceScale * 256.0f / m_images[i].Height();
+
+        DrawPuzzlePiece(
+            &memDC,
+            m_images[i],
+            x,
+            y,
+            angles[i] * DEG,
+            sx,
+            sy,
+            mirrorX[i],
+            mirrorY[i]
+        );
     }
 
-    // Prikaz upozorenja ako nedostaje slika
+    // Pokretni plavi deo
+    if (m_loaded[MOVING_PIECE])
+    {
+        int i = MOVING_PIECE;
 
-    bool missing = false;
+        float sx =
+            pieceScale * 256.0f / m_images[i].Width();
 
+        float sy =
+            pieceScale * 256.0f / m_images[i].Height();
+
+        DrawPuzzlePiece(
+            &memDC,
+            m_images[i],
+            m_pieceX,
+            m_pieceY,
+            angles[i] * DEG,
+            sx,
+            sy,
+            mirrorX[i],
+            mirrorY[i]
+        );
+    }
+
+    // Poruka za nedostajuce slike
     for (int i = 0; i < PIECE_COUNT; i++)
     {
         if (!m_loaded[i])
         {
-            missing = true;
+            memDC.SetBkMode(TRANSPARENT);
+            memDC.SetTextColor(RGB(180, 0, 0));
+
+            memDC.TextOut(
+                10, 480,
+                _T("Nedostaju slike u folderu Slike!")
+            );
+
             break;
         }
     }
 
-    if (missing)
-    {
-        memDC.SetBkMode(TRANSPARENT);
-        memDC.SetTextColor(RGB(180, 0, 0));
-
-        memDC.TextOut(
-            10, 470,
-            _T("Nedostaju slike u folderu Slike!")
-        );
-    }
-
-    // Prenos gotovog kadra na prozor
-
+    // Prenos gotovog prikaza na ekran
     pDC->BitBlt(
         0, 0, width, height,
         &memDC, 0, 0,
@@ -422,7 +620,7 @@ void CIND19728View::OnDraw(CDC* pDC)
     memDC.SelectObject(oldBuffer);
 }
 
-// Tastatura
+// Kontrole tastature
 
 void CIND19728View::OnKeyDown(
     UINT nChar,
@@ -430,7 +628,6 @@ void CIND19728View::OnKeyDown(
     UINT nFlags)
 {
     const float STEP = 10.0f;
-
     bool changed = true;
 
     switch (nChar)
@@ -460,6 +657,11 @@ void CIND19728View::OnKeyDown(
         m_pieceY = 400.0f;
         break;
 
+    case VK_RETURN:
+        m_pieceX = 242.0f;
+        m_pieceY = 247.0f;
+        break;
+
     default:
         changed = false;
         break;
@@ -468,9 +670,7 @@ void CIND19728View::OnKeyDown(
     if (changed)
         Invalidate(FALSE);
 
-    CView::OnKeyDown(
-        nChar, nRepCnt, nFlags
-    );
+    CView::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
 // Klik za postavljanje plavog dela
@@ -481,9 +681,9 @@ void CIND19728View::OnLButtonDown(
 {
     SetFocus();
 
-    const float targetX = 250.0f;
-    const float targetY = 250.0f;
-    const float halfSize = 75.0f;
+    const float targetX = 242.0f;
+    const float targetY = 247.0f;
+    const float halfSize = 90.0f;
 
     bool clickedBlue =
         point.x >= m_pieceX - halfSize &&
@@ -544,8 +744,7 @@ void CIND19728View::AssertValid() const
     CView::AssertValid();
 }
 
-void CIND19728View::Dump(
-    CDumpContext& dc) const
+void CIND19728View::Dump(CDumpContext& dc) const
 {
     CView::Dump(dc);
 }
@@ -558,9 +757,7 @@ CIND19728Doc* CIND19728View::GetDocument() const
         )
     );
 
-    return static_cast<CIND19728Doc*>(
-        m_pDocument
-    );
+    return static_cast<CIND19728Doc*>(m_pDocument);
 }
 
 #endif

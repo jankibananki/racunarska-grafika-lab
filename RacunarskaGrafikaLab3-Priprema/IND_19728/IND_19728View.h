@@ -28,11 +28,10 @@ protected:
 
     bool m_loaded[PIECE_COUNT] = {};
     bool m_imagesInitialized = false;
+    bool m_showGrid = true;
 
     float m_pieceX = 600.0f;
     float m_pieceY = 400.0f;
-
-    bool m_showGrid = true;
 
     void Translate(
         CDC* pDC,
@@ -57,15 +56,10 @@ protected:
         bool my,
         bool rightMultiply);
 
-    void FilterBitmap(DImage& img, bool blue);
-    void MakeGray(DImage& img);
-    void MakeBlue(DImage& img);
+    void ApplyFilter(CBitmap& bmp, bool blue);
 
     void LoadImages(CDC* pDC);
-
-    void PreparePiece(
-        CDC* pDC,
-        int index);
+    bool PreparePiece(CDC* pDC, int index);
 
     void DrawPuzzlePiece(
         CDC* pDC,
@@ -82,11 +76,9 @@ protected:
 
     virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
     virtual void OnBeginPrinting(
-        CDC* pDC,
-        CPrintInfo* pInfo);
+        CDC* pDC, CPrintInfo* pInfo);
     virtual void OnEndPrinting(
-        CDC* pDC,
-        CPrintInfo* pInfo);
+        CDC* pDC, CPrintInfo* pInfo);
 
 #ifdef _DEBUG
     virtual void AssertValid() const;
