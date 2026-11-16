@@ -422,7 +422,7 @@ void CIND19728View::OnDraw(CDC* pDC)
     memDC.SelectObject(oldBuffer);
 }
 
-// Tastaturaa
+// Tastatura
 
 void CIND19728View::OnKeyDown(
     UINT nChar,
