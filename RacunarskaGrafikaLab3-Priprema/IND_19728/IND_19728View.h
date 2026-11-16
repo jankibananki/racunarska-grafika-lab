@@ -20,7 +20,7 @@ public:
 
 protected:
     static const int PIECE_COUNT = 9;
-    static const int MOVING_PIECE = 5;
+    static const int MOVING_PIECE = 8;
 
     DImage m_images[PIECE_COUNT];
     CBitmap m_masks[PIECE_COUNT];
@@ -57,6 +57,7 @@ protected:
         bool my,
         bool rightMultiply);
 
+    void FilterBitmap(DImage& img, bool blue);
     void MakeGray(DImage& img);
     void MakeBlue(DImage& img);
 
